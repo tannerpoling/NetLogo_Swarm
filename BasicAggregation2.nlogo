@@ -9,6 +9,8 @@ turtles-own [
 ;   ideal-dist: central ideal distance for stabilization
 ;   margin: how far above or below ideal-dist is acceptable for stabilization
 ;   velocity: how far agents move
+
+; global variables
 globals [
   stable-dist-min
   stable-dist-max
@@ -18,75 +20,39 @@ to setup;
   clear-all
   reset-ticks
   create-turtles num-turtles [ setxy random-xcor random-ycor ]
-  ask turtles [
-    set color blue ; agents are blue until stabilized
-    set stabilized? false
-    find-nearest
-  ]
-
   set stable-dist-min ideal-dist - margin
   set stable-dist-max ideal-dist + margin
+
 
 end
 
 to go
   ask turtles [
-    ifelse stabilized? [
-        set color green    ; this is the 'if' branch
-        set label "stable"
-      ]
-      [
-        set nearest-dist distance nearest-agent
-        move-nearest       ; this is the 'else' branch
-      ]
+    maintain-dist-near
   ]
   tick
 end
 
-to find-nearest
-;  ask turtles [
-    set nearest-agent min-one-of other turtles [distance myself]
-    set nearest-dist distance nearest-agent
-  ;]
+to maintain-dist-near
+  let nearest-group other turtles in-radius (stable-dist-max)
+  set nearest-agent min-one-of nearest-group [distance myself]
+  set nearest-dist distance nearest-agent
+  face nearest-agent
+  ifelse nearest-dist < stable-dist-min
+    [ rt 180
+      forward velocity ]
+    [ maintain-dist-far ] ; look for farawy turtles to move closer towards (other function)
 end
 
-to move-nearest
-;  ask turtles [
-    face nearest-agent
-    (ifelse
-      nearest-dist > stable-dist-max [ ; agent dustance is bigger than stable range
-        forward velocity
-      ]
-      nearest-dist < stable-dist-min [ ; agent distance is smaller than stable range
-        forward -1 * velocity
-      ]
-      ; else
-      [
-        ;set stabilized? true
-      find-nearest
-      ]
-    )
-;  ]
+to maintain-dist-far
+  let nearest-group other turtles in-radius (stable-dist-max * 2)
+  set nearest-agent min-one-of nearest-group [distance myself]
+  set nearest-dist distance nearest-agent
+  face nearest-agent
+  ifelse nearest-dist > stable-dist-max
+    [ forward velocity ]
+    [ set stabilized? true ]
 end
-; notes
-; variable "stabilized" set to true if within acceptable distance of another agent
-;   if stabilized -> dont move, color = green
-;   else -> follow movement algo
-; movement algo
-;   determine nearest agent (not sure how)
-;   if nearest is greater than range -> move towards nearest agent (not sure how)
-;   else if nearest is less than range -> move away from nearest agent
-
-
-; should an agent "lock in" to being stabilized as soon as it is?
-; like if 2 become stable and another drone wanders close to one of them,
-;   should that agent move away from this new drone? or stand still
-;   and let the new one figure itself out
-
-
-; new idea
-; at beginning of the entire thing, each agent finds its nearest neighbor
-; this selected neighbor DOES NOT CHANGE throughout the simulation
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
@@ -141,7 +107,7 @@ num-turtles
 num-turtles
 0
 100
-32.0
+62.0
 1
 1
 NIL
@@ -186,7 +152,7 @@ velocity
 velocity
 0
 10
-1.0
+0.5
 0.5
 1
 NIL

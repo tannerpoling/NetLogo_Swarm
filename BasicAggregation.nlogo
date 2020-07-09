@@ -45,7 +45,8 @@ end
 
 to find-nearest
 ;  ask turtles [
-    set nearest-agent min-one-of other turtles [distance myself]
+    let nearest-group other turtles in-radius (2 * ideal-dist)
+    set nearest-agent min-one-of nearest-group [distance myself]
     set nearest-dist distance nearest-agent
   ;]
 end
@@ -63,7 +64,7 @@ to move-nearest
       ; else
       [
         set stabilized? true
-      ;find-nearest
+        find-nearest
       ]
     )
 ;  ]
@@ -141,7 +142,7 @@ num-turtles
 num-turtles
 0
 100
-18.0
+62.0
 1
 1
 NIL
@@ -171,7 +172,7 @@ margin
 margin
 0
 15
-6.0
+1.0
 1
 1
 NIL
