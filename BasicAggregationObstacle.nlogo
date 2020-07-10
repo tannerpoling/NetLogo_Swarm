@@ -9,6 +9,10 @@ turtles-own [
 ;   ideal-dist: central ideal distance for stabilization
 ;   margin: how far above or below ideal-dist is acceptable for stabilization
 ;   velocity: how far agents move
+;   obstacle-color
+;   background-dolor
+;   avoidance-radius
+
 
 ; global variables
 globals [
@@ -22,9 +26,13 @@ to setup;
   create-turtles num-turtles [ setxy random-xcor random-ycor ]
   set stable-dist-min ideal-dist - margin
   set stable-dist-max ideal-dist + margin
+  set obstacle-color red
   ask turtles [
     set stabilized? false
-    set size 2
+    set size 3
+  ]
+  ask patches [
+    set pcolor background-color
   ]
 
 
@@ -32,12 +40,51 @@ end
 
 to go
   ask turtles [
-    ifelse stabilized?
-    [ set label "STABLE" ]
-    [ maintain-dist-near ]
+    ifelse within-obstacle
+    [ escape-obstacle ]
+    [
+;      ifelse stabilized?
+ ;     [ set label "STABLE" ]
+  ;    [
+        ifelse near-obstacle
+        [ avoid-obstacle ]
+        [ maintain-dist-near ]
+  ;    ]
+    ]
   ]
 
+  if ticks >= 60 [ spawn-obstacle 0 0 30 30 obstacle-color]
+
   tick
+end
+
+to-report near-obstacle
+  report (any? patches in-radius avoidance-radius with [ pcolor = obstacle-color ])
+end
+
+to avoid-obstacle
+  face min-one-of patches with [ pcolor = obstacle-color ] [ distance myself ]
+  rt 180
+  forward velocity
+end
+
+to-report within-obstacle ; to-report denotes this function as one that returns a value. In this case, a boolean
+  ifelse pcolor = obstacle-color
+  [
+    set stabilized? false
+    report true
+  ]
+  [ report false ]
+
+end
+
+to escape-obstacle
+  ifelse (any? patches in-radius ideal-dist with [ pcolor = background-color ])
+  [
+    face min-one-of patches with [ pcolor = background-color ] [ distance myself ]
+    forward velocity
+  ]
+  [ go-rand ]
 end
 
 to maintain-dist-near
@@ -78,12 +125,22 @@ to go-rand
   rt new-direction
   forward velocity
 end
+
+; draws a rectangular obstacle
+; x,y = coords of upper left corner
+; clr = color
+to spawn-obstacle [ x y width len clr ]
+  ask patches with
+    [ width >= pxcor and pxcor >= x
+      and
+      y >= pycor and pycor >= (- len + 2) ] [ set pcolor clr ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-821
-622
+521
+322
 -1
 -1
 3.0
@@ -96,10 +153,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--100
-100
--100
-100
+-50
+50
+-50
+50
 0
 0
 1
@@ -131,8 +188,8 @@ SLIDER
 num-turtles
 num-turtles
 0
-100
-100.0
+300
+141.0
 1
 1
 NIL
@@ -147,7 +204,7 @@ ideal-dist
 ideal-dist
 0
 40
-38.0
+18.0
 1
 1
 NIL
@@ -199,6 +256,51 @@ NIL
 NIL
 NIL
 0
+
+SLIDER
+20
+384
+192
+417
+background-color
+background-color
+0
+140
+0.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+20
+437
+192
+470
+obstacle-color
+obstacle-color
+0
+140
+15.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+22
+240
+194
+273
+avoidance-radius
+avoidance-radius
+0
+30
+8.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?

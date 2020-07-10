@@ -1,0 +1,137 @@
+turtles-own [
+  stabilized?
+  nearest-dist
+  nearest-agent
+]
+
+; slider variables
+;   num-turtles
+;   ideal-dist: central ideal distance for stabilization
+;   margin: how far above or below ideal-dist is acceptable for stabilization
+;   velocity: how far agents move
+;   obstacle-color
+;   background-dolor
+;   avoidance-radius
+
+
+; global variables
+globals [
+  stable-dist-min
+  stable-dist-max
+]
+
+to setup;
+  clear-all
+  reset-ticks
+  create-turtles num-turtles [ setxy random-xcor random-ycor ]
+  set stable-dist-min ideal-dist - margin
+  set stable-dist-max ideal-dist + margin
+  set obstacle-color red
+  ask turtles [
+    set stabilized? false
+    set size 3
+  ]
+  ask patches [
+    set pcolor background-color
+  ]
+
+
+end
+
+to go
+  ask turtles [
+    ifelse within-obstacle
+    [ escape-obstacle ]
+    [
+;      ifelse stabilized?
+ ;     [ set label "STABLE" ]
+  ;    [
+        ifelse near-obstacle
+        [ avoid-obstacle ]
+        [ maintain-dist-near ]
+  ;    ]
+    ]
+  ]
+
+  if ticks >= 60 [ spawn-obstacle 0 0 30 30 obstacle-color]
+
+  tick
+end
+
+to-report near-obstacle
+  report (any? patches in-radius avoidance-radius with [ pcolor = obstacle-color ])
+end
+
+to avoid-obstacle
+  face min-one-of patches with [ pcolor = obstacle-color ] [ distance myself ]
+  rt 180
+  forward velocity
+end
+
+to-report within-obstacle ; to-report denotes this function as one that returns a value. In this case, a boolean
+  ifelse pcolor = obstacle-color
+  [
+    set stabilized? false
+    report true
+  ]
+  [ report false ]
+
+end
+
+to escape-obstacle
+  ifelse (any? patches in-radius ideal-dist with [ pcolor = background-color ])
+  [
+    face min-one-of patches with [ pcolor = background-color ] [ distance myself ]
+    forward velocity
+  ]
+  [ go-rand ]
+end
+
+to maintain-dist-near
+  let nearest-group other turtles in-radius (stable-dist-max)
+  set nearest-agent min-one-of nearest-group [distance myself]
+
+  ifelse nearest-agent = nobody
+  [ go-rand ]
+  [
+    set nearest-dist distance nearest-agent
+    face nearest-agent
+    ifelse nearest-dist < stable-dist-min
+    [
+      rt 180
+      forward velocity
+    ]
+    [ maintain-dist-far ] ; look for faraway turtles to move closer towards (other function)
+  ]
+end
+
+to maintain-dist-far
+  let nearest-group other turtles in-radius (stable-dist-max * 2)
+  set nearest-agent min-one-of nearest-group [distance myself]
+
+  ifelse nearest-agent = nobody
+  [ go-rand ]
+  [
+    set nearest-dist distance nearest-agent
+    face nearest-agent
+    ifelse nearest-dist > stable-dist-max
+      [ forward velocity ]
+      [ set stabilized? true ]
+  ]
+end
+
+to go-rand
+  let new-direction random 360
+  rt new-direction
+  forward velocity
+end
+
+; draws a rectangular obstacle
+; x,y = coords of upper left corner
+; clr = color
+to spawn-obstacle [ x y width len clr ]
+  ask patches with
+    [ width >= pxcor and pxcor >= x
+      and
+      y >= pycor and pycor >= (- len + 2) ] [ set pcolor clr ]
+end
