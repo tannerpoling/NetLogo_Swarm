@@ -5,12 +5,13 @@
 ;     should broadcast a threat message about it
 ;   - this message should contain the threat level and the ID of the turtle sending it
 ;     (ID of a turtle is accessed via "who" keyword)
+;   - need to figure out how each turtle can check if any new messages have come in
 
 ; add moving towards current highest threat
-;   store current occupying threat: level + location
-;   compare to any incoming messages about threats
-;   change current color to match current threat
-;   update vx and vy to move towards current threat
+;   - store current occupying threat: level + location
+;   - compare to any incoming messages about threats
+;   - change current color to match current threat
+;   - update vx and vy to move towards current threat
 
 turtles-own [
   vx ; y-velocity
