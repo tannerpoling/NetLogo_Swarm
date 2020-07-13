@@ -1,0 +1,160 @@
+; to-do
+
+; add threat communication amongst turtles
+;   - any turtle that "sees" a threat (assuming field of view (fov) is a cone in front of it)
+;     should broadcast a threat message about it
+;   - this message should contain the threat level and the ID of the turtle sending it
+;     (ID of a turtle is accessed via "who" keyword)
+
+; add moving towards current highest threat
+;   store current occupying threat: level + location
+;   compare to any incoming messages about threats
+;   change current color to match current threat
+;   update vx and vy to move towards current threat
+
+turtles-own [
+  vx ; y-velocity
+  vy ; x-velocity
+]
+
+
+; user-specified variables:
+;   velocity-base: base speed
+;   velocity-variance: how much to randomly change speed by
+;   velocity-adjust: how much to speed up or slow down by
+;   search-fov: field of view when searching for neighbors
+;   search-radius: outward limit when searching for neighbors
+;   vertical-dist-thresh: difference in y-coordinates that causes turtle to adjust speed
+
+
+; global variables:
+globals [
+  num-turtles
+  turtle-spacing ; how much distance turtles keep between themselves in line
+
+]
+
+
+; starting positions of turtles is pre-defined (using origin at bottom-left corner)
+
+to setup
+  clear-all
+  reset-ticks
+
+  set num-turtles 5
+  set turtle-spacing 40
+;
+
+  create-turtles num-turtles
+  ask turtles [
+    setxy (125 + who * turtle-spacing) 50
+    set size 10
+    set heading 0
+
+    set vx 0
+    set vy velocity-base
+  ]
+
+
+end
+
+
+to go
+
+  ask turtles [
+
+    check-neighbors
+    move
+
+  ]
+
+  tick
+end
+
+to check-neighbors
+  ; every turtle checks turtle to left and right of them
+  ; in reality this check is within some cone going out to left and right of them
+
+  ; if neither left or right neighbor
+    ; try to find neighbors
+  ; else if left neighbor
+    ; calculate left y difference
+    ; test if too far ahead of left neighbor, too far behind left
+  ; else if right neighbor
+    ; calculate right y difference
+    ; test if too far ahead of right neighbor, too far behind right
+
+  ; rotate left and find neighbors in a cone with range 30 degrees, radius 25
+  let left-neighbor min-one-of cone-search-neighbors 270 search-fov search-radius [ distance myself ]
+  let right-neighbor min-one-of cone-search-neighbors 90 search-fov search-radius [distance myself ]
+
+  (ifelse
+    left-neighbor = nobody and right-neighbor = nobody ; nobody in sight
+    [ find-neighbor ]
+    left-neighbor != nobody ; found a left-side neighbor
+    [
+      let left-dist ycor - ( [ ycor ] of left-neighbor )
+      (ifelse
+        left-dist > vertical-dist-thresh [ slow-down ]     ; too far ahead
+        left-dist * -1 > vertical-dist-thresh [ speed-up ] ; too far behind
+        [ randomize-velocity ])                            ; proceed normally
+    ]
+
+    right-neighbor != nobody ; found a right-side neighbor
+    [
+      let right-dist ycor - ( [ ycor ] of right-neighbor )
+      (ifelse
+        right-dist > vertical-dist-thresh [ slow-down ]
+        right-dist * -1 > vertical-dist-thresh [ speed-up ]
+        [ randomize-velocity ])
+    ]
+
+    )
+
+end
+
+to find-neighbor
+  ; what to do if vision of neighbor is interrupted?
+  ; go random direction? idk
+  set vx random 15
+  set vy random 15
+
+    ; alt. idea: coin-flip to either speed up or slow down. code:
+;  let coinflip? (random 1 = 0)
+;  ifelse coinflip?
+;    [ speed-up ]
+;    [ slow-down ]
+
+end
+
+
+to slow-down
+  set vy vy - velocity-adjust
+
+end
+
+to speed-up
+  set vy vy + velocity-adjust
+
+end
+
+to randomize-velocity
+  set vy velocity-base + (velocity-variance * random-float 1)
+  ; range = [velocity-base, base + variance]
+end
+
+to-report cone-search-neighbors [rotation fov-angle dist]
+  set heading rotation ; rotate to given angle: north = 0, 90 = east, west = 270
+  if visualize? [
+    ask patches in-cone dist fov-angle [ set pcolor red ]
+    ask patches in-cone dist fov-angle [ set pcolor black ]
+  ]
+  let result other turtles in-cone dist fov-angle
+  set heading 0 ; reset back to original heading (assumed north, 0)
+
+  report result  ; think of "report" as a return statement in regular code
+end
+
+to move
+  setxy (xcor + vx) (ycor + vy)
+end
