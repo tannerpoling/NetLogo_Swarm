@@ -5,17 +5,17 @@
 ;     should broadcast a threat message about it
 ;   - this message should contain the threat level and the ID of the turtle sending it
 ;     (ID of a turtle is accessed via "who" keyword)
-;   - need to figure out how each turtle can check if any new messages have come in
 
 ; add moving towards current highest threat
-;   - store current occupying threat: level + location
-;   - compare to any incoming messages about threats
-;   - change current color to match current threat
-;   - update vx and vy to move towards current threat
+;   need to still maintain separation while pursuing threat
 
 turtles-own [
   vx ; y-velocity
   vy ; x-velocity
+  threat-active? ; true if currently pursuing threat
+  threat-x
+  threat-y
+  threat-high?
 ]
 
 
@@ -32,6 +32,8 @@ turtles-own [
 globals [
   num-turtles
   turtle-spacing ; how much distance turtles keep between themselves in line
+  threat-speed-low
+  threat-speed-high
 
 ]
 
@@ -54,17 +56,40 @@ to setup
 
     set vx 0
     set vy velocity-base
+    set threat-active? false
+    set threat-high? false
   ]
 
+  spawn-threats
 
 end
 
+
+to spawn-threats
+  spawn-obstacle 40 110 90 30 green
+  spawn-obstacle 30 220 70 20 orange
+  spawn-obstacle 260 330 70 20 red
+
+end
+
+
+; draws a rectangular obstacle
+; x,y = coords of upper left corner
+; clr = color
+to spawn-obstacle [ x y width height clr ]
+  ask patches with
+    [ pxcor >= x and pxcor <= x + width
+      and
+      pycor >= y and pycor <= y + height ] [ set pcolor clr ]
+end
 
 to go
 
   ask turtles [
 
-    check-neighbors
+    ifelse threat-active?
+    [ towards-threat threat-x threat-y ]
+    [ check-neighbors ]
     move
 
   ]
@@ -139,6 +164,22 @@ to speed-up
 
 end
 
+to towards-threat [ x y ]
+  ; current idea: have x and y coords of threat / turtle who saw threat
+  ; can easily adapt to take in ID of turtle and just get coordinates via:
+  ; [ xcor ] of turtle-id, [ ycor ] of turtle-id
+  ; make unit vector from x and y coords, scale by different "threat-speeds" to get vx, vy
+  let magnitude sqrt(x ^ 2 + y ^ 2)
+  let unit-x x / magnitude
+  let unit-y y / magnitude
+  ifelse threat-high?
+    [ set vx threat-speed-high * unit-x
+      set vy threat-speed-high * unit-y ]
+    [ set vx threat-speed-low * unit-x
+      set vy threat-speed-low * unit-y ]
+
+end
+
 to randomize-velocity
   set vy velocity-base + (velocity-variance * random-float 1)
   ; range = [velocity-base, base + variance]
@@ -147,8 +188,11 @@ end
 to-report cone-search-neighbors [rotation fov-angle dist]
   set heading rotation ; rotate to given angle: north = 0, 90 = east, west = 270
   if visualize? [
-    ask patches in-cone dist fov-angle [ set pcolor red ]
+    let patchesToColor patches in-cone dist fov-angle
+    ask patchesToColor [
+      set pcolor red ]
     ask patches in-cone dist fov-angle [ set pcolor black ]
+    spawn-threats
   ]
   let result other turtles in-cone dist fov-angle
   set heading 0 ; reset back to original heading (assumed north, 0)
